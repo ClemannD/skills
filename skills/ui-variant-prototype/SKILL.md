@@ -1,13 +1,15 @@
 ---
 name: ui-variant-prototype
-description: Scaffold temporary multi-layout UI prototypes with persisted variant switching and a floating preview toggle. Use when comparing 2–5 design options for a component, the user asks to try alternatives before picking one, or when building A/B-style layout previews in React apps with shadcn.
+description: Scaffold temporary multi-layout UI prototypes with persisted variant switching and a floating preview toggle. Use when comparing 2–5 design options for a component, the user asks to try alternatives before picking one, or when building A/B-style layout previews in React apps.
 ---
 
 # UI Variant Prototype
 
 Temporary workflow for comparing visual/layout options in the running app, then collapsing to a single implementation when the user picks a winner.
 
-**Stack assumed:** React (Next.js App Router `'use client'` conventions used below, adapt for other setups), shadcn/ui `Button`, Tailwind, and whatever state management the app already uses (Jotai, Zustand, Redux, plain `useState`, React Context — see [Preview state](#phase-3--preview-infrastructure)).
+**Stack:** Any React setup (Vite SPA, Next.js, Remix, etc.). Examples below use shadcn/ui and Tailwind for the toggle UI — swap for the app's own component library and styling — and whatever state management the app already uses (Jotai, Zustand, Redux, React Context — see [Preview state](#phase-3--preview-infrastructure)).
+
+Everything below is client-side code. If the app uses React Server Components (e.g. Next.js App Router), add `'use client'` at the top of each preview file; in other setups, omit it.
 
 ## When to use
 
@@ -44,8 +46,6 @@ Use explicit entry files (`feature-name.tsx`), not `index.ts` barrels.
 
 ```ts
 // feature-name-data.ts
-'use client';
-
 export type FeatureItem = { key: string; label: string; value: string; isEmpty: boolean };
 
 export function useFeatureItems(): FeatureItem[] {
@@ -69,8 +69,7 @@ The only requirement: the chosen variant must **persist** (survive a reload/navi
 - **Already on Jotai?** Use `atomWithStorage` — one line, persistence included.
 - **Already on Zustand?** Use the `persist` middleware.
 - **Already on Redux?** A slice + a `localStorage`-syncing subscriber, or `redux-persist`.
-- **No global state library / keep it local?** Plain `useState` + a `useEffect` that reads/writes `localStorage` directly.
-- **React Context-based app?** A small context provider wrapping the same `useState` + `localStorage` pattern.
+- **No global state library?** A small React Context provider wrapping `useState` + `localStorage`. A bare `useState` hook is **not** enough: the toggle and the router are separate components, so each would get its own copy and switching wouldn't update the feature live — the state must be shared through a provider (or a store).
 
 Whatever you pick, expose the same three things: the variant union/type, a read+write accessor, and a labels map for the toggle UI.
 
@@ -83,7 +82,7 @@ export const FEATURE_PREVIEW_VARIANTS = ['a', 'b', 'c'] as const;
 export type FeaturePreviewVariant = (typeof FEATURE_PREVIEW_VARIANTS)[number];
 
 export const featurePreviewVariantAtom = atomWithStorage<FeaturePreviewVariant>(
-  'my-app:feature-preview-variant-v1', // bump suffix when union changes
+  'my-app:dashboard-feature-preview-variant-v1', // bump suffix when union changes
   'a',
 );
 
@@ -94,27 +93,47 @@ export const FEATURE_PREVIEW_LABELS: Record<FeaturePreviewVariant, string> = {
 };
 ```
 
-**Example implementation (plain React, no library):**
+**Example implementation (plain React, no library)** — the file becomes `feature-name-preview.state.tsx` since it renders a provider:
 
-```ts
-'use client';
-import { useEffect, useState } from 'react';
+```tsx
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
 export const FEATURE_PREVIEW_VARIANTS = ['a', 'b', 'c'] as const;
 export type FeaturePreviewVariant = (typeof FEATURE_PREVIEW_VARIANTS)[number];
 
-const STORAGE_KEY = 'my-app:feature-preview-variant-v1';
+const STORAGE_KEY = 'my-app:dashboard-feature-preview-variant-v1';
 
-export function useFeaturePreviewVariant() {
-  const [variant, setVariant] = useState<FeaturePreviewVariant>(
-    () => (localStorage.getItem(STORAGE_KEY) as FeaturePreviewVariant | null) ?? 'a',
-  );
+type PreviewContextValue = readonly [FeaturePreviewVariant, (v: FeaturePreviewVariant) => void];
+
+const FeaturePreviewContext = createContext<PreviewContextValue | null>(null);
+
+export function FeaturePreviewProvider({ children }: { children: ReactNode }) {
+  // Start from the default and read localStorage after mount — under SSR
+  // (Next.js, Remix, ...) localStorage doesn't exist at render time, and a
+  // render-time read would mismatch on hydration. Harmless in a pure SPA.
+  const [variant, setVariant] = useState<FeaturePreviewVariant>('a');
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, variant);
-  }, [variant]);
+    const stored = localStorage.getItem(STORAGE_KEY) as FeaturePreviewVariant | null;
+    if (stored && FEATURE_PREVIEW_VARIANTS.includes(stored)) setVariant(stored);
+  }, []);
 
-  return [variant, setVariant] as const;
+  const setAndPersist = (v: FeaturePreviewVariant) => {
+    setVariant(v);
+    localStorage.setItem(STORAGE_KEY, v);
+  };
+
+  return (
+    <FeaturePreviewContext.Provider value={[variant, setAndPersist] as const}>
+      {children}
+    </FeaturePreviewContext.Provider>
+  );
+}
+
+export function useFeaturePreviewVariant(): PreviewContextValue {
+  const value = useContext(FeaturePreviewContext);
+  if (!value) throw new Error('useFeaturePreviewVariant requires FeaturePreviewProvider');
+  return value;
 }
 
 export const FEATURE_PREVIEW_LABELS: Record<FeaturePreviewVariant, string> = {
@@ -130,8 +149,6 @@ export const FEATURE_PREVIEW_LABELS: Record<FeaturePreviewVariant, string> = {
 ### Router (`feature-name.tsx`)
 
 ```tsx
-'use client';
-
 import type { ComponentType } from 'react';
 import { useFeatureItems } from './feature-name-data';
 // Jotai example — replace with your state hook of choice:
@@ -159,20 +176,25 @@ export function FeatureName() {
 
 ### Floating toggle (`feature-name-preview-toggle.tsx`)
 
-Mount **once** on the page/layout that already wraps whatever provider your state approach needs (Jotai `Provider`, Zustand doesn't need one, Context needs its own provider, etc.)—sibling to the feature, not inside server components.
+Mount **once** on the page/layout, inside whatever provider your state approach needs (Jotai `Provider`, Zustand doesn't need one, Context needs its own provider, etc.)—sibling to the feature component.
 
 ```tsx
-'use client';
-
 import { useAtom } from 'jotai'; // swap for your state hook
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/button'; // shadcn/ui — swap for the app's button
 import { cn } from '@/lib/utils';
 import {
   FEATURE_PREVIEW_LABELS,
   FEATURE_PREVIEW_VARIANTS,
   featurePreviewVariantAtom,
-  type FeaturePreviewVariant,
 } from './feature-name-preview.state';
+
+// Static class names — Tailwind can't generate CSS for `grid-cols-${n}` template literals.
+const GRID_COLS: Record<number, string> = {
+  2: 'grid-cols-2',
+  3: 'grid-cols-3',
+  4: 'grid-cols-4',
+  5: 'grid-cols-5',
+};
 
 export function FeatureNamePreviewToggle() {
   const [variant, setVariant] = useAtom(featurePreviewVariantAtom);
@@ -184,7 +206,7 @@ export function FeatureNamePreviewToggle() {
       aria-label="Layout preview"
     >
       <p className="text-muted-foreground text-xs font-medium">Layout preview</p>
-      <div className={cn('grid gap-1', `grid-cols-${FEATURE_PREVIEW_VARIANTS.length}`)}>
+      <div className={cn('grid gap-1', GRID_COLS[FEATURE_PREVIEW_VARIANTS.length] ?? 'grid-cols-3')}>
         {FEATURE_PREVIEW_VARIANTS.map((option) => (
           <Button
             key={option}
@@ -193,7 +215,7 @@ export function FeatureNamePreviewToggle() {
             variant={variant === option ? 'default' : 'outline'}
             className="h-8 text-xs"
             aria-pressed={variant === option}
-            onClick={() => setVariant(option as FeaturePreviewVariant)}
+            onClick={() => setVariant(option)}
           >
             {FEATURE_PREVIEW_LABELS[option]}
           </Button>
@@ -204,7 +226,7 @@ export function FeatureNamePreviewToggle() {
 }
 ```
 
-For 4–5 options, use `grid-cols-5` or `flex flex-wrap gap-1` instead of dynamic Tailwind class names (JIT may not see template literals).
+For 4–5 options with long labels, `flex flex-wrap gap-1` is a good alternative to the grid.
 
 ### Page wiring
 

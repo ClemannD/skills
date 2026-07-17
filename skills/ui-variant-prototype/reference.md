@@ -1,11 +1,13 @@
 # UI Variant Prototype — Reference
 
+Code samples use shadcn/ui and Tailwind — swap for the app's own component library and styling.
+
 ## Naming conventions
 
 | Artifact | Pattern | Example |
 |----------|---------|---------|
 | Data | `{feature}-data.ts` | `recipe-header-time-stats-data.ts` |
-| Preview state | `{feature}-preview.state.ts` | `card-actions-preview.state.ts` |
+| Preview state | `{feature}-preview.state.ts` (`.tsx` if it renders a context provider) | `card-actions-preview.state.ts` |
 | Toggle | `{feature}-preview-toggle.tsx` | `card-actions-preview-toggle.tsx` |
 | Variant | `variants/{feature}-{slug}.tsx` | `variants/recipe-header-time-stats-tiles.tsx` |
 | Shared UI | `{feature}-shared.tsx` | optional icons, empty tooltips |
@@ -84,4 +86,4 @@ import { Feature } from './feature-name';
 
 1. `useDashboardStatItems()` → `{ key, label, value, isEmpty }[]`
 2. Variants: `columns`, `inline`, `tiles`, `minimal`, `icon-stack`
-3. User picks `tiles` → merge tiles markup into `dashboard-card-stats.tsx`, delete preview folder, remove toggle from `dashboard/page.tsx`.
+3. User picks `tiles` → merge tiles markup into `dashboard-card-stats.tsx`, delete preview folder, remove toggle from the dashboard page component.
