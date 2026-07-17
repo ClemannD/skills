@@ -21,3 +21,9 @@ Or copy a skill folder directly into your agent's skills directory (e.g. `.claud
 Compare 2–5 layout options for a UI component live in the running app instead of in mockups. The skill scaffolds one component per variant behind a small router, a persisted variant switcher, and a floating preview toggle, so you can flip between options while browsing the real app. Once a winner is picked, it collapses everything back to a single implementation and deletes the preview machinery.
 
 Works with any React setup (Vite, Next.js, Remix, …) and any state library; examples use shadcn/ui and Tailwind.
+
+### [full-project-thermo-review](./skills/full-project-thermo-review/SKILL.md)
+
+Audit an entire codebase for code quality — not just a diff. The skill shards the repo into domain-scoped chunks small enough to read in full, fans out one parallel sub-agent per shard applying the [thermo-nuclear-code-quality-review](https://github.com/cursor/plugins/blob/main/thermos/skills/thermo-nuclear-code-quality-review/SKILL.md) standard, and rolls everything up into ticket-ready files: one file per finding, genuine functional bugs split into their own `bugs/` folder, and a cross-shard overview that spots patterns no single reviewer would see. Identification-only by default, with an offer to file the findings as tickets (Linear, Jira, GitHub Issues, …) at the end.
+
+Language- and framework-agnostic — the sharding, fan-out, and synthesis process adapts to whatever codebase it runs in.
