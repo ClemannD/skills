@@ -1,0 +1,46 @@
+---
+description: In a component file, place helper/subcomponents below the main exported component
+alwaysApply: true
+---
+
+# Component Ordering
+
+When splitting a component into smaller function components within the same file, place helper components **below** the main exported component.
+
+```tsx
+// ✅ GOOD — main export first, sub-components below
+export function ProductCard({ product }: Props) {
+  return (
+    <div>
+      <ProductImage uri={product.imageUrl} />
+      <ProductDetails name={product.name} price={product.price} />
+    </div>
+  );
+}
+
+function ProductImage({ uri }: { uri: string }) {
+  return <img src={uri} alt="" />;
+}
+
+function ProductDetails({ name, price }: { name: string; price: number }) {
+  return (
+    <div>
+      <span>{name}</span>
+      <span>{price}</span>
+    </div>
+  );
+}
+
+// ❌ BAD — sub-components above the main export
+function ProductImage({ uri }: { uri: string }) {
+  return <img src={uri} alt="" />;
+}
+
+export function ProductCard({ product }: Props) {
+  return (
+    <div>
+      <ProductImage uri={product.imageUrl} />
+    </div>
+  );
+}
+```

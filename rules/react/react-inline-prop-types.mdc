@@ -1,0 +1,65 @@
+---
+description: Enforce inline React component prop typing and default export conventions
+alwaysApply: true
+---
+
+# React Component Conventions
+
+## Inline Prop Types
+
+Define component prop types inline in the function parameter instead of creating a separate `interface` or `type` alias.
+
+```tsx
+// ❌ BAD
+interface ButtonProps {
+  label: string;
+  onClick: () => void;
+}
+
+export function Button({ label, onClick }: ButtonProps) {
+  return (
+    <button type="button" onClick={onClick}>
+      {label}
+    </button>
+  );
+}
+
+// ✅ GOOD
+export default function Button({
+  label,
+  onClick,
+}: {
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button type="button" onClick={onClick}>
+      {label}
+    </button>
+  );
+}
+```
+
+Prefer this pattern for all React components in this project unless a shared external contract is explicitly required.
+
+## Default Export for Main Component
+
+The primary component of a file should be declared as `export default function`. Secondary/helper components in the same file use named exports.
+
+```tsx
+// ❌ BAD
+export function ProfileScreen() {
+  return <div>...</div>;
+}
+
+// ❌ BAD
+const ProfileScreen = () => {
+  return <div>...</div>;
+};
+export default ProfileScreen;
+
+// ✅ GOOD
+export default function ProfileScreen() {
+  return <div>...</div>;
+}
+```

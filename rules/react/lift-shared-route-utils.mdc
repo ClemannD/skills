@@ -1,0 +1,49 @@
+---
+description: Lift shared helpers out of feature-specific folders; never import across feature boundaries
+alwaysApply: true
+---
+
+# Lift shared route utils — no cross-feature imports
+
+Do **not** import from one feature’s private tree into a sibling feature. Example of a boundary violation:
+
+- `recipes/[id]/_components/…` importing `recipes/_components/recipe-composer/lib/recipe-composer-time.ts`
+
+The composer folder is **composer-only**. The detail page is a separate feature. Shared code belongs at the **lowest common route segment**, not under whichever feature happened to define it first.
+
+## Where shared code goes
+
+| Used by | Put it in |
+|--------|-----------|
+| One feature only (e.g. composer dialog) | That feature’s `_components/…/lib/` or colocated module |
+| Multiple routes/features under the same segment (e.g. `[id]` + `recipe-composer` under `recipes/`) | `src/app/…/recipes/_lib/` |
+| Most of the web app, no natural route owner | `src/lib/` (or `apps/web/src/lib/` in a monorepo) |
+| Web + mobile (or API contract) | `packages/*` |
+
+Use `_lib/` (underscore, not a route) for **non-UI** helpers: formatters, mappers, constants shared by several screens under the same segment. Keep `_components/` for React UI.
+
+## Naming
+
+If a module is shared across features, **do not** prefix it with a single feature name.
+
+| Avoid | Prefer |
+|-------|--------|
+| `recipe-composer-time.ts` | `recipe-time.ts` in `recipes/_lib/` |
+| `recipe-composer-display.ts` used by detail page | `recipe-display.ts` in `recipes/_lib/` |
+
+## When you need an existing helper from “the wrong place”
+
+1. **Lift** it to the lowest common `_lib/` (or `src/lib/` / package).
+2. **Update all imports** (original owner + consumers).
+3. **Delete** the old feature-local copy.
+
+Do **not** add another cross-boundary import to avoid a small move.
+
+## Quick check before adding an import
+
+1. Is the import path inside another feature’s folder (e.g. `recipe-composer/`, a specific dialog folder)?
+2. Is the importing file outside that feature?
+
+If both are yes → lift the dependency first, then import from `_lib/` or higher.
+
+See also: [`nextjs-app-file-organization.mdc`](nextjs-app-file-organization.mdc).
