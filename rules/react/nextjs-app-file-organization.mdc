@@ -1,0 +1,59 @@
+---
+description: Where to put components, hooks, and state in a Next.js App Router web app
+alwaysApply: true
+---
+
+# Next.js app file organization
+
+## Inside the App Router (`src/app/`)
+
+Colocate route-specific code with underscore-prefixed folders so Next.js does not treat them as routes:
+
+| Folder        | Use for |
+|---------------|---------|
+| `_components` | Components used only by this segment or its children |
+| `_hooks`      | Hooks used only by this segment or its children |
+| `_state`      | State modules (stores, context providers scoped to this subtree, etc.) |
+| `_lib`        | Non-UI helpers shared by multiple features under this segment (formatters, mappers) — see [`lift-shared-route-utils.mdc`](lift-shared-route-utils.mdc) |
+
+**Placement rule:** Put `_components`, `_hooks`, and `_state` at the **lowest common path** in the route tree that needs them.
+
+- Used only by `src/app/dashboard/page.tsx` → `src/app/dashboard/_components/…`
+- Shared by `dashboard/analytics` and `dashboard/reports` → `src/app/dashboard/_components/…`
+- Shared by unrelated top-level areas → lift to `src/components/` (see below) or split duplicate-free boundaries deliberately
+
+```text
+src/app/
+  layout.tsx
+  page.tsx
+  dashboard/
+    _components/     ← dashboard-only UI
+    _hooks/
+    _state/
+    page.tsx
+    settings/
+      _components/   ← settings subtree only
+      page.tsx
+```
+
+In a monorepo this tree typically lives under `apps/web/src/app/`.
+
+## App-wide code (`src/components/`)
+
+Put **cross-cutting** components next to `app/`, not inside a single route:
+
+`src/components/` — shell, nav, auth wrappers, and anything reused across many unrelated routes.
+
+Do **not** put shadcn-style primitives or shared design-system widgets here.
+
+## UI package (`packages/ui`)
+
+**shadcn / design-system primitives** (Button, Card, Sonner, `cn`, global tokens) live in a **shared UI package** (commonly `packages/ui`). Import from the UI package in app code; keep `src/components/` for app composition, not reusable atoms.
+
+If the project is not a monorepo, keep primitives in the project’s design-system folder instead — still separate from route-colocated `_components/`.
+
+## Quick decision
+
+1. Is it a shadcn-style primitive or token? → UI package / design-system folder
+2. Is it used across the whole app with no natural route “owner”? → `src/components/`
+3. Otherwise → `src/app/.../<segment>/_components|_hooks|_state/` at the lowest shared segment

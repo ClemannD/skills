@@ -1,0 +1,42 @@
+---
+description: Handlers should be defined in the lowest component possible, not passed through props
+alwaysApply: true
+---
+
+# No Callback Props — Colocate Handlers
+
+Do not pass callback functions (click handlers, submit handlers, change handlers, etc.) down through component props. Define handlers in the lowest component that needs them.
+
+- Reduces prop drilling and coupling between components
+- Makes components more self-contained and easier to reason about
+- Keeps behavior colocated with the UI that triggers it
+
+## Examples
+
+```tsx
+// ❌ BAD — handler passed from parent
+function Parent() {
+  const handleClick = () => doSomething();
+  return <ChildButton onClick={handleClick} />;
+}
+
+function ChildButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick}>
+      Click
+    </button>
+  );
+}
+
+// ✅ GOOD — handler defined in the component that uses it
+function ChildButton() {
+  const handleClick = () => doSomething();
+  return (
+    <button type="button" onClick={handleClick}>
+      Click
+    </button>
+  );
+}
+```
+
+If shared **state** is needed between siblings, use feature-scoped context or Jotai — not callback props. Do not centralize every mutation in one parent hook; see [`modular-components.mdc`](modular-components.mdc) for complex dialogs and multi-section UI.

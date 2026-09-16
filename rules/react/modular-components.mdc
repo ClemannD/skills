@@ -1,0 +1,129 @@
+---
+description: Break complex UI into feature folders; leaf components own API/actions; no god hooks or callback props
+alwaysApply: true
+---
+
+# Modular Components — No God Components or God Hooks
+
+Do not build large monolithic components or a single feature hook that owns every query, mutation, and handler. Split UI into small, focused files. Each file should have one responsibility; **the component that renders an action owns that action.**
+
+Works together with [`no-callback-props.mdc`](no-callback-props.mdc): do not lift handlers into a parent (or parent hook) and pass them down as props.
+
+## Core rules
+
+1. **One logical concern per file.** A save footer, upload tile, gallery row, and delete confirmation are separate components.
+2. **API interactions at the lowest level.** Mutations, queries, and cache invalidation live in the component that triggers or displays them — not in a parent and not in a shared `useFeatureEverything()` hook.
+3. **Colocate with the owning route or feature.** Keep UI under `_components/` at the lowest owning App Router segment (see [`nextjs-app-file-organization.mdc`](nextjs-app-file-organization.mdc)).
+4. **Use folder hierarchy for semantic grouping.** Multi-part features get their own folder; nest `components/` (or domain-specific subfolders) when several leaves belong to one shell.
+5. **No `index.ts` / `index.tsx` barrels.** The entry file is named after the feature (e.g. `recipe-header/recipe-header.tsx`); imports use that explicit path — see [`no-component-index-files.mdc`](no-component-index-files.mdc).
+
+**Examples in this rule are illustrative only.** Adapt names and structure to the product.
+
+## Complex features (dialogs, wizards, multi-section panels)
+
+For flows with several actions (save, upload, delete, generate, etc.):
+
+| Layer | Responsibility |
+| ----- | -------------- |
+| **Feature folder** | Groups all files for one dialog, panel, or screen section |
+| **Thin shell** | Layout, dialog chrome, composition of sections — no mutations |
+| **Section / leaf components** | Own their UI, handlers, and API hooks |
+| **Feature context** (when needed) | Shared *UI state* only (`open`, draft selection, item pending delete) — not shared handlers |
+| **Sync helper** (optional) | Small effect-only module to align shared state with external inputs (e.g. reset draft when dialog opens) |
+
+### Folder layout (illustrative)
+
+```
+_components/
+  recipe-composer/
+    recipe-composer-image-dialog/
+      recipe-composer-image-dialog.tsx          # shell + provider wrapper
+      recipe-composer-image-dialog-context.tsx  # shared UI state
+      recipe-composer-image-dialog-sync.tsx     # optional effects (no UI)
+      build-ai-image-prompt.ts                  # pure helpers
+      components/
+        recipe-composer-image-dialog-footer.tsx # Save / Cancel + save mutation
+        upload-recipe-image-tile.tsx            # Upload + create/confirm mutations
+        delete-image-alert-dialog.tsx           # Delete + delete mutation
+        previously-used-images-section.tsx      # List query + gallery
+        previously-used-image-card.tsx          # Select + open delete flow
+```
+
+### Anti-patterns
+
+```tsx
+// ❌ BAD — one hook owns every action and query; shell only wires props
+function useImageDialog() {
+  const upload = useCreateMediaUpload();
+  const deleteAsset = useDeleteMediaAsset();
+  const handleSave = () => { /* ... */ };
+  const handleUpload = () => { /* ... */ };
+  return { handleSave, handleUpload, /* 20 more fields */ };
+}
+
+function ImageDialog() {
+  const dialog = useImageDialog();
+  return (
+    <Footer onSave={dialog.handleSave} />
+    <UploadTile onUpload={dialog.handleUpload} />
+  );
+}
+```
+
+```tsx
+// ✅ GOOD — each leaf owns its behavior; context holds shared selection only
+function UploadRecipeImageTile() {
+  const { setPendingAssetId } = useRecipeComposerImageDialog();
+  const createUpload = useCreateMediaUpload();
+  const handleUploadFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    // mutation + setPendingAssetId here
+  };
+  return (/* file input + tile */);
+}
+
+function RecipeComposerImageDialogFooter() {
+  const { pendingAssetId, setOpen } = useRecipeComposerImageDialog();
+  const { setValue } = useFormContext();
+  const handleSave = () => {
+    setValue('imageAssetId', pendingAssetId);
+    setOpen(false);
+  };
+  return (/* Cancel + Save buttons */);
+}
+```
+
+## Shared state between siblings
+
+When multiple cousins need the same UI state (pending selection, which row is being deleted, dialog open):
+
+- Prefer a **feature-scoped React context** or **Jotai atoms** scoped with a `Provider` at the feature root.
+- Store **values** (`pendingId`, `assetToDelete`, `open`), not **callback bundles**.
+- For cross-cutting guards (e.g. block dialog close while upload runs), expose minimal flags from context (e.g. register busy keys from the component that owns the mutation) — do not centralize the mutation in the provider.
+
+Layout-only parents may compose children with **no props** beyond `children` or static labels.
+
+## Leaf component with its own data
+
+```tsx
+// ✅ GOOD — the component that shows the data owns the fetch
+export function SummaryMetrics() {
+  const { data } = useQuery({
+    queryKey: ['reporting', 'summary'],
+    queryFn: fetchReportingSummary,
+  });
+
+  if (!data) return null;
+
+  return (
+    <section>
+      <Metric label="Total" value={data.total} />
+    </section>
+  );
+}
+```
+
+## Checklist before adding a feature hook
+
+- [ ] Does this hook only hold **shared UI state** or **derived read-only** values? → OK in context / small hook file.
+- [ ] Does it call **mutations** or define **submit/upload/delete/save** handlers used by multiple children? → Split into the components that render those controls.
+- [ ] Am I passing `onSave`, `onUpload`, `onDelete`, etc. through props? → Move handlers into the child that has the button (see [`no-callback-props.mdc`](no-callback-props.mdc)).

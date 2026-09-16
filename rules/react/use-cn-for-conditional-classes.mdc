@@ -1,0 +1,22 @@
+---
+description: Use cn() utility for conditional/dynamic class names instead of template literals
+alwaysApply: true
+---
+
+# Use `cn()` for Conditional Classes
+
+Import `cn` from the project’s class-name utility when building dynamic or conditional `className` strings. Common locations are `@/lib/utils` (web) or `@/lib/utils/cn` (React Native / NativeWind). Never use backtick template literals with string interpolation for classes. Applies to any React component that accepts `className` (DOM elements, Radix/shadcn wrappers, NativeWind components, etc.).
+
+```tsx
+// ❌ BAD — template literal interpolation
+<div className={`flex-1 ${isActive ? 'bg-primary' : 'bg-muted'}`} />
+
+// ❌ BAD — ternary inside template
+<span className={`text-base ${disabled && 'opacity-50'}`} />
+
+// ✅ GOOD — cn() merges and deduplicates classes correctly
+<div className={cn('flex-1', isActive ? 'bg-primary' : 'bg-muted')} />
+
+// ✅ GOOD — falsy values are safely ignored
+<span className={cn('text-base', disabled && 'opacity-50')} />
+```

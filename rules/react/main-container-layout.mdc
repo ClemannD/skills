@@ -1,0 +1,44 @@
+---
+description: Choose container vs viewport breakpoints for layout and responsiveness based on where UI lives in the tree
+---
+
+# Main container layout
+
+When adding or changing responsive layout in an app with a **sidebar + main content column**, pick **container queries** or **viewport breakpoints** based on **what width should drive the decision**.
+
+Apply this rule in apps that render authenticated pages inside a named `@container/main` column (typically viewport minus sidebar). Viewport breakpoints mis-fire in that column when the sidebar toggles.
+
+## Decision checklist
+
+| Question | If yes → |
+| --- | --- |
+| Is this inside the authenticated main column and about **how dense** content is (grid cols, split layouts)? | **`@*/main:`** container queries — see below |
+| Does JS need a column count (virtualization, row chunking)? | A main-column width helper — never `window.innerWidth` |
+| Is this **shell chrome** (sidebar, header, mobile tab bar) or **device mode** (mobile vs desktop)? | **Viewport** variants (`sm:`, `md:`, …) |
+| Is this a **reusable component** adapting to its slot, not the page column? | Local **`@container/name`** + default `@sm:` / `@md:` scale |
+| Is this outside authenticated layout (marketing, auth pages)? | **Viewport** variants |
+
+## When to use `@*/main:` variants
+
+Use Tailwind container query variants targeting `/main` for **main-column layout density**:
+
+- Grid column counts (`@sm/main:grid-cols-2`, `@5xl/main:grid-cols-3`, `@7xl/main:grid-cols-4`)
+- Col-span / split layouts on content pages
+- Shared class constants derived from the same main-column scale
+
+## When to keep viewport breakpoints
+
+Keep `sm:`, `md:`, `lg:`, etc. for **device / shell** decisions:
+
+- Sidebar sheet vs fixed rail, mobile tab bar, header chrome
+- Padding or typography inside a component card (not page-level grid density)
+
+## JavaScript column math
+
+For virtualization or other JS layout (e.g. TanStack Virtual row chunking), derive column counts from the **main column’s measured width**, not `window.innerWidth`.
+
+## Nested component containers
+
+Component-local `@container/name` (e.g. `@container/card-header`) uses the default container scale for internal responsiveness. Do not use `/main` unless querying the authenticated shell column.
+
+Thresholds follow Tailwind's default container scale (`@sm` = 384px, `@5xl` = 1024px, `@7xl` = 1280px).

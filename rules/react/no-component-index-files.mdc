@@ -1,0 +1,39 @@
+---
+description: Never add index.ts/index.tsx barrel files for component folders; use explicit named entry files
+alwaysApply: true
+---
+
+# No `index.ts` / `index.tsx` for component folders
+
+**Never** create `index.ts` or `index.tsx` (or `index.js` / `index.jsx`) as a barrel or re-export entry for a React component folder.
+
+## Required pattern
+
+- Name the main component file after the feature, e.g. `recipe-header/recipe-header.tsx` exporting `RecipeHeader`.
+- Import with the **full path** to that file:
+
+```ts
+import { RecipeHeader } from '@/app/.../recipe-header/recipe-header';
+```
+
+## Folder layout
+
+```text
+_components/
+  recipe-header/
+    recipe-header.tsx          ← entry; exports RecipeHeader
+    recipe-header-actions.tsx
+    recipe-header-badges.tsx
+    use-recipe-header-display.ts
+```
+
+## Do not
+
+```text
+❌ recipe-header/index.tsx      ← re-exports RecipeHeader
+❌ import { RecipeHeader } from '.../recipe-header'   ← relies on index resolution
+```
+
+Split files (`recipe-header-meta.tsx`, hooks, helpers) stay as separate named modules. Only the **primary** component file acts as the public entry — not an index barrel.
+
+Works with [`modular-components.mdc`](modular-components.mdc) and [`nextjs-app-file-organization.mdc`](nextjs-app-file-organization.mdc).
