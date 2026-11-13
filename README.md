@@ -44,6 +44,10 @@ Audit an entire codebase for code quality — not just a diff. The skill shards 
 
 Language- and framework-agnostic — the sharding, fan-out, and synthesis process adapts to whatever codebase it runs in.
 
+### [code-docs-style](./skills/code-docs-style/SKILL.md)
+
+Write and edit code comments, doc comments, READMEs, and engineering docs in a plain engineer-to-engineer voice. The skill lists the AI speak to cut (personification, filler, grand framing, clipped aphorisms), keeps comments to what the code can't say, and gives READMEs a fixed shape: what it is, a working example, then only the sections a caller needs. Includes before/after examples and a checklist for de-slopping existing text.
+
 ## Rules
 
 Workspace rules, grouped by stack. Full install notes and catalog: [rules/README.md](./rules/README.md).
