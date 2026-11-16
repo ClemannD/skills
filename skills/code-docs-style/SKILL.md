@@ -51,7 +51,12 @@ something the code doesn't.
   - restating the signature or types;
   - narrating the branches of the body;
   - naming other functions or files ("mirrors X", "same as Y"). They go stale. Share code
-    instead. Issue IDs and external specs are fine;
+    instead. External specs are fine;
+  - issue IDs (`SOUR-7326`, `WORK-1234`). The ticket explains why the change happened, not what
+    the code does, and `git blame` already links the PR. The one exception is a temporary TODO
+    that names the issue that removes it: `// TODO(SOUR-7400): drop once every client sends v2.`;
+  - project status or history ("Garden has no tag taxonomy yet", "added for the migration"). It
+    goes stale. Put it in the PR description;
   - "why not X" alternatives. Those go in the PR description or a decision record;
   - speculation about future callers.
 - Test: read the comment, then the code. If the code told you the same thing as fast, delete the
